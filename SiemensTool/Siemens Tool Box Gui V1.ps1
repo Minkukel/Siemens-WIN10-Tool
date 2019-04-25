@@ -6,10 +6,10 @@ if (-Not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
         Exit
     }
 }
+#Reset alle variabelen
+rv * -ea SilentlyContinue; rmo *; $error.Clear(); cls
 
 function Startup{
-#Reset alle variabelen
-    rv * -ea SilentlyContinue; rmo *; $error.Clear(); cls
 #Voegt windows form componenten toe
     Add-Type -AssemblyName System.Windows.Forms
     [System.Windows.Forms.Application]::EnableVisualStyles()
@@ -54,7 +54,6 @@ Function Get-Database($initialDirectory){
 
 function MainScreen{
     $Main_Form                          = New-Object system.Windows.Forms.Form
-    $Main_Form.ClientSize               = '824,584'
     $Main_Form.text                     = "Siemens WIN10 TOOLBOX by Rein Veenstra   JC-ELECTRONICS"
     $Main_Form.AutoSize                 = $true
     $Main_Form.AutoSizeMode             = "GrowAndShrink"
@@ -116,7 +115,7 @@ function MainScreen{
 
     $SetupDirTextBox                    = New-Object system.Windows.Forms.TextBox
     $SetupDirTextBox.multiline          = $false
-    $SetupDirTextBox.width              = 117
+    $SetupDirTextBox.width              = 322
     $SetupDirTextBox.height             = 20
     $SetupDirTextBox.location           = New-Object System.Drawing.Point(85,220)
     $SetupDirTextBox.Font               = 'Microsoft Sans Serif,10'
@@ -133,7 +132,7 @@ function MainScreen{
     $SetupDirButton.text                = "Browse"
     $SetupDirButton.width               = 60
     $SetupDirButton.height              = 30
-    $SetupDirButton.location            = New-Object System.Drawing.Point(220,213)
+    $SetupDirButton.location            = New-Object System.Drawing.Point(421,213)
     $SetupDirButton.Font                = 'Microsoft Sans Serif,10'
 
     $InstallDirButton                   = New-Object system.Windows.Forms.Button
@@ -212,8 +211,9 @@ function MainScreen{
     $InstallDirTextBox.location         = New-Object System.Drawing.Point(176,254)
     $InstallDirTextBox.Font             = 'Microsoft Sans Serif,10'
 
-    $LogTextBox                         = New-Object system.Windows.Forms.TextBox
+    $LogTextBox                         = New-Object system.Windows.Forms.RichTextBox
     $LogTextBox.multiline               = $true
+    $LogTextBox.ScrollBars              = "Vertical"
     $LogTextBox.width                   = 519
     $LogTextBox.height                  = 138
     $LogTextBox.location                = New-Object System.Drawing.Point(11,422)
@@ -234,8 +234,15 @@ function MainScreen{
     $ExtraButton.location               = New-Object System.Drawing.Point(725,94)
     $ExtraButton.Font                   = 'Microsoft Sans Serif,10'
 
+    $InfoButton                        = New-Object system.Windows.Forms.Button
+    $InfoButton.text                   = "Info"
+    $InfoButton.width                  = 85
+    $InfoButton.height                 = 35
+    $InfoButton.location               = New-Object System.Drawing.Point(725,135)
+    $InfoButton.Font                   = 'Microsoft Sans Serif,10'
 
-    $Main_Form.controls.AddRange(@($SoftwareLabel,$SoftwareBox,$NetInstallStatusButton,$ModusLabel,$ModusTextBox,$SetupDirLabel,$SetupDirTextBox,$InstallDirLabel,$SetupDirButton,$InstallDirButton,$NetInstallLabel,$NetInstallButton,$NetInstallStatusLabel,$VCInstallStatusLabel,$VCInstallStatusButton,$VCInstallLabel,$VCInstallButton,$InstallButton,$InstallDirTextBox,$LogTextBox,$LogLabel,$ExtraButton))
+
+    $Main_Form.controls.AddRange(@($SoftwareLabel,$SoftwareBox,$NetInstallStatusButton,$ModusLabel,$ModusTextBox,$SetupDirLabel,$SetupDirTextBox,$InstallDirLabel,$SetupDirButton,$InstallDirButton,$NetInstallLabel,$NetInstallButton,$NetInstallStatusLabel,$VCInstallStatusLabel,$VCInstallStatusButton,$VCInstallLabel,$VCInstallButton,$InstallButton,$InstallDirTextBox,$LogTextBox,$LogLabel,$ExtraButton,$InfoButton))
 
 
     #Write your logic code here
@@ -246,6 +253,9 @@ function MainScreen{
     $Software_Names = $Software_list | select -ExpandProperty Software
     $Exe_location = $SetupDirTextBox.Text
     $Global:Selected_Program = ""
+    $Global:Selected_Folder = ""
+    $newLine = [System.Environment]::NewLine
+
 
 
     #NET3.5 Status laden
@@ -271,12 +281,15 @@ function MainScreen{
         $ModusTextBox.Text = ($Software_List | where Software -eq $SoftwareBox.SelectedItem).OS_Version_Exe
         $Global:Selected_Program = $SoftwareBox.SelectedItem
         $InstallDirButton.Enabled = $true
-        $SetupDirButton.Enabled = $true
     } #end GetModusSelected
 
     function Get-InstallPath
     {
         $InstallDirTextBox.Text = Get-Folder
+        if ($Selected_folder -ne "")
+        {
+            $SetupDirButton.Enabled = $true
+        }
     }
 
     Function Get-Folder
@@ -284,13 +297,19 @@ function MainScreen{
         [System.Reflection.Assembly]::LoadWithPartialName("System.windows.forms")|Out-Null
         $foldername = New-Object System.Windows.Forms.FolderBrowserDialog
         $foldername.Description = "Selecteer de map waar de bestanden van", "$Selected_Program", "staan!"
+        $foldername.ShowNewFolderButton = $false
         $foldername.rootfolder = "MyComputer"
-        if($foldername.ShowDialog() -eq "OK")
+        if($foldername.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK)
         {
-            $folder += $foldername.SelectedPath
+            $folder = $foldername.SelectedPath
+            $Global:Selected_Folder = $folder
+        }else
+        {
+            $Global:Selected_Folder = ""
+            $InstallButton.Enabled = $false
+            $foldername.Dispose()
         }
         return $folder
-        $foldername.Dispose()
     }
 
     function Get-InstallEXEFileName
@@ -306,16 +325,29 @@ function MainScreen{
         $OpenFileDialog.initialDirectory = $initialDirectory
         $OpenFileDialog.FileName = $FileName
         $OpenFileDialog.filter = "EXE (*.EXE)| *.EXE"
-        $OpenFileDialog.ShowDialog() | Out-Null
-        $OpenFileDialog.filename
-        $OpenFileDialog.Dispose()
+        if ($OpenFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK)
+        {
+            $OpenFileDialog.filename
+            $Global:Selected_Exe = $OpenFileDialog.FileName
+            $InstallButton.Enabled = $true
+        }else
+        {
+            $InstallButton.Enabled = $false
+            $OpenFileDialog.Dispose()
+        }
     }
 
     Function Install-Program()
     {
-        $LogTextBox.text = $installDirTextBox.Text
+        $LogTextBox.text += "Installatie bestanden locatie:", $Selected_Folder
+        $LogTextBox.text += $newLine
+        $LogTextBox.text += ".Exe locatie:", $Selected_Exe
     }
 
+    function Info
+    {
+        Write-Host "Info test"
+    }
 
     #Aanduiden als .NET3.5 geinstalleerd is!
     if ($NetStatus -eq "Enabled")
@@ -331,9 +363,11 @@ function MainScreen{
         $SetupDirButton.Enabled = $false
     }
 
-    Function Get-NET3.5Info
+    # Als er geen installatie folder is geselecteerd is de install button disabled!
+    if ($Selected_folder -eq "")
     {
-        $LogTextBox.text = (Get-WindowsOptionalFeature -Online -FeatureName NETFX3).state
+        $InstallButton.Enabled = $false
+        $SetupDirButton.Enabled = $false
     }
 
     $Main_Form.ShowDialog()
