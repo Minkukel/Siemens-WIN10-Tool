@@ -1,4 +1,5 @@
 Software,OS_Version_Exe,OS_Version_Msi,Exe_name,Msi_name
 Protool V6,WINXPSP2,MSIAUTO,Install*,
-Microwin 4.0 SP9,WIN7,MSIAUTO,setup*,
+Protool V6 SP3 HF3,WINXPSP2,MSIAUTO,Setup*,
+Microwin 4.0 SP9,WIN7RTM,MSIAUTO,setup*,
 SINAUT,WINXPSP2,MSIAUTO,st7setup*,
