@@ -16,7 +16,15 @@ function Startup{
 #Laat weten of script goed start
     Write-Host "Script Started Startup"
 #Opent keuze menu om .csv bestand met software instellingen in te laden.
-    $global:CSVfile = Get-Database
+    $WantFile = "\\tdas01\data$\TD\TD\Afdeling PLC\Rein\Stage 4e jaar\Siemens WIN10 Tool\Database\Software.csv" #Vast variabel op server waar de database staat!
+    $FileExists = Test-Path $WantFile
+    If ($FileExists -eq $True) {
+        Write-Host "Database staat op server!"
+        $Global:CSVfile = $Wantfile
+    }Else {
+        Write-Host "Selecteer handmatig de database"
+        $global:CSVfile = Get-Database
+    }
 # Als .csv path niet leeg in geeft die weer dat CSV correct ingeladen is, en ander geeft die foutmelding
     if ($CSVfile -ne ""){
         Write-Host "CSV Correct geladen"
