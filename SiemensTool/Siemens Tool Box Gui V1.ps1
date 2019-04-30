@@ -63,7 +63,6 @@ function MainScreen{
     $Main_Form.SizeGripStyle            = "Hide"
     $Main_Form.StartPosition            = "CenterScreen"
                                             # CenterScreen, Manual, WindowsDefaultLocation, WindowsDefaultBounds, CenterParent
-    $Main_Form.TopMost                  = $true
 
 
     $SoftwareLabel                      = New-Object system.Windows.Forms.Label
@@ -253,9 +252,12 @@ function MainScreen{
     $Software_Names = $Software_list | select -ExpandProperty Software
     $Exe_location = $SetupDirTextBox.Text
     $Global:Selected_Program = ""
-    $Global:Selected_Folder = ""
+    $Global:Selected_Folder = ""    #Adres van de software en onderliggende mappen met exe bestand.
     $newLine = [System.Environment]::NewLine
-
+    $Global:registryPath = "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers" #Set compatibilty modus for all users
+    #$Global:registryPath = "HKCU:\Software\ScriptingGuys\Scripts" #TEST
+    #$value = ""     #welke register waarde nodig is. Wordt ingesteld op basis van gekozen software
+    $Global:value_MSI = "MSIAUTO"
 
 
     #NET3.5 Status laden
@@ -266,6 +268,7 @@ function MainScreen{
     $InstallDirButton.Add_Click({ Get-InstallPath })
     $SetupDirButton.Add_Click({ Get-InstallEXEFileName })
     $ExtraButton.Add_Click({ Get-NET3.5Info })
+    $infoButton.Add_Click({ Info })
 
 
     Foreach ($Software_Names in $Software_Names)
@@ -280,6 +283,7 @@ function MainScreen{
     {
         $ModusTextBox.Text = ($Software_List | where Software -eq $SoftwareBox.SelectedItem).OS_Version_Exe
         $Global:Selected_Program = $SoftwareBox.SelectedItem
+        $Global:value = ($Software_List | where Software -eq $SoftwareBox.SelectedItem).OS_Version_Exe
         $InstallDirButton.Enabled = $true
     } #end GetModusSelected
 
@@ -339,9 +343,50 @@ function MainScreen{
 
     Function Install-Program()
     {
+        $LogTextBox.Clear()
         $LogTextBox.text += "Installatie bestanden locatie:", $Selected_Folder
         $LogTextBox.text += $newLine
         $LogTextBox.text += ".Exe locatie:", $Selected_Exe
+        $LogTextBox.text += $newLine
+        Get-ChildItem "$Selected_Folder\*.exe" -Recurse | ForEach-Object {
+            IF(!(Test-Path $registryPath))
+            {
+                New-Item -Path $registryPath -Force | Out-Null
+
+                New-ItemProperty -Path $registryPath -Name $_.FullName -Value $value `
+
+            } else
+            {
+                New-ItemProperty -Path $registryPath -Name $_.FullName -Value $value `
+            }
+            if ($? -eq "True") {
+                Write-Host "Het is gelukt!"
+                $succes = $TRUE
+            } else {
+                Write-Host "ERROR! Mogelijk bestaat het bestand al in het register!"
+                $succes = $FALSE
+            }
+        }
+        Get-ChildItem "$Selected_Folder\*.msi" -Recurse | ForEach-Object {
+            IF(!(Test-Path $registryPath))
+            {
+                New-Item -Path $registryPath -Force | Out-Null
+
+                New-ItemProperty -Path $registryPath -Name $_.FullName -Value $value_MSI `
+
+            } else
+            {
+                New-ItemProperty -Path $registryPath -Name $_.FullName -Value $value_MSI `
+            }
+            if ($? -eq "True") {
+                Write-Host "Het is gelukt!"
+                $succes = $TRUE
+            } else {
+                Write-Host "ERROR! Mogelijk bestaat het bestand al in het register!"
+                $succes = $FALSE
+            }
+        }
+        Start-Process $Selected_Exe -NoNewWindow -Wait
     }
 
     function Info
